@@ -5,7 +5,8 @@ from textual.containers import Container
 from textual.widget import Widget
 from textual.widgets import Input, Static, Tree
 
-from .api import CachedPart, CachedStockItem, part_search
+from .api import CachedStockItem
+from .api.part_search import CachedPart, part_search
 from .error_screen import IgnorableErrorEvent
 
 
