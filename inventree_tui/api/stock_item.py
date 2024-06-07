@@ -2,8 +2,8 @@ from inventree.stock import StockItem, StockLocation
 from inventree.part import Part
 from .base import api
 
-class CachedStockItem():
 
+class CachedStockItem:
     def title_name(self):
         return f"Stock #{self._stock_item.pk}"
 
@@ -68,4 +68,3 @@ class CachedStockItem():
         if isinstance(other, CachedStockItem):
             return self._stock_item.pk == self._stock_item.pk
         return False
-

@@ -1,2 +1,2 @@
 from .app import InventreeApp
-#app = InventreeApp()
+# app = InventreeApp()
