@@ -1,5 +1,8 @@
-from inventree.stock import StockItem, StockLocation
 from inventree.part import Part
+from inventree.stock import StockItem, StockLocation
+
+from inventree_tui.api import transfer_items
+
 from .base import api
 
 
@@ -28,7 +31,7 @@ class CachedStockItem:
 
     @property
     def part(self) -> Part:
-        if self._part == None:
+        if self._part is None:
             self._part = self._stock_item.getPart()
         return self._part
 

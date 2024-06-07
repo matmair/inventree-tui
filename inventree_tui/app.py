@@ -1,39 +1,38 @@
 import logging
-from textual.app import App, ComposeResult
-from textual.widgets import (
-    Header,
-    Input,
-    Button,
-    Static,
-    TabPane,
-    TabbedContent,
-    Label,
-    DataTable,
-)
-from textual.widgets.data_table import RowKey
-from textual.widget import Widget
-from textual.containers import Container, Horizontal
-from textual.reactive import reactive
-from inventree_tui.api import (
-    ApiException,
-    scanBarcode,
-    CachedStockItemRow,
-    RowBaseModel,
-    transfer_items,
-    CachedStockItemCheckInRow,
-)
-from textual.screen import Screen, ModalScreen
+from typing import List, Set, Type
 
+from pydantic import ValidationError
+from textual.app import App, ComposeResult
+from textual.containers import Container, Horizontal
 from textual.events import Event, Key
 from textual.logging import TextualHandler
-
 from textual.message import Message
-from typing import List, Type, Set
-from pydantic import ValidationError
+from textual.reactive import reactive
+from textual.screen import ModalScreen, Screen
+from textual.widget import Widget
+from textual.widgets import (
+    Button,
+    DataTable,
+    Header,
+    Input,
+    Label,
+    Static,
+    TabbedContent,
+    TabPane,
+)
+from textual.widgets.data_table import RowKey
 
+from inventree_tui.api import (
+    ApiException,
+    CachedStockItemCheckInRow,
+    CachedStockItemRow,
+    RowBaseModel,
+    scanBarcode,
+    transfer_items,
+)
+
+from .error_screen import ErrorDialogScreen, IgnorableErrorEvent
 from .part_search import PartSearchTab
-from .error_screen import IgnorableErrorEvent, ErrorDialogScreen
-
 
 logging.basicConfig(
     level="NOTSET",
@@ -132,7 +131,7 @@ class ModelDataTable(DataTable):
                 self.remove_row(row_key)
 
         for row_key in self.rows.keys():
-            cells = self.get_row(row_key)
+            self.get_row(row_key)
             for col_key in self.columns.keys():
                 if col_key != "delete_button":
                     current_value = self.get_cell(row_key, col_key)
@@ -549,8 +548,3 @@ class InventreeApp(App):
 #       async def handle_button_pressed(self, message: Button.Pressed) -> None:
 #            if message.button.id == "exception_ok":
 #                await self.pop_screen()
-
-# app = InventreeApp()
-# if __name__ == "__main__":
-#    app = InventreeApp()
-#    app.run()

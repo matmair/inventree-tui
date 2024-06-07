@@ -1,10 +1,11 @@
 import logging
+
 from textual.app import ComposeResult
-from textual.widgets import Input, Static, Tree
 from textual.containers import Container
 from textual.widget import Widget
-from .api import part_search, CachedPart, CachedStockItem
+from textual.widgets import Input, Static, Tree
 
+from .api import CachedPart, CachedStockItem, part_search
 from .error_screen import IgnorableErrorEvent
 
 
@@ -48,7 +49,6 @@ class PartSearchTree(Widget):
             self.add_stock_item(node, stock_item)
 
     def on_tree_node_selected(self, message: Tree.NodeSelected):
-        tree = message.control
         node = message.node
         logging.info(f"NODE SELECTED {node} {node.data}")
         if isinstance(node.data, CachedPart) and len(node.children) == 0:

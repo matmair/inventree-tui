@@ -1,5 +1,6 @@
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
 from inventree.api import InvenTreeAPI
 
 load_dotenv()
