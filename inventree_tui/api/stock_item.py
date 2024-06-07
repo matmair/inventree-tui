@@ -1,8 +1,6 @@
 from inventree.part import Part
 from inventree.stock import StockItem, StockLocation
 
-from inventree_tui.api import transfer_items
-
 from .base import api
 
 
@@ -19,6 +17,8 @@ class CachedStockItem:
         self._destination = None
 
     def transfer(self, destination=None):
+        from inventree_tui.api import transfer_items
+
         if destination is not None:
             self._destination = destination
         if self._destination is None:
