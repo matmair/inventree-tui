@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - test_new
 
 permissions:
   contents: read
