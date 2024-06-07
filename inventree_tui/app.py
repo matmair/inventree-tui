@@ -346,7 +346,7 @@ class TransferItemsTab(Container):
         yield Static("Status Ok", id="transfer_status_text", classes="status_text")
 
     async def on_mount(self):
-        table = self.query_one("#transfer-items-table")
+        table = self.query_one("#transfer-items-table")  # noqa
         # TODO: remove this after testing
         # await self.handle_item_input('{"stockitem":338}')
         # await self.handle_item_input('{"stockitem":338}')
@@ -444,7 +444,7 @@ class CheckInItemsTab(Container):
         yield Static("Status Ok", id="checkin_status_text", classes="status_text")
 
     async def on_mount(self):
-        table = self.query_one("#checkin_items_table")
+        table = self.query_one("#checkin_items_table")  # noqa
         # TODO: remove this after testing
         # await self.handle_item_input('{"stockitem":338}')
         # await self.handle_item_input('{"stockitem":338}')
