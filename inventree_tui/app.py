@@ -1,51 +1,77 @@
 import logging
-from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, Input, Button, Static, TabPane, Tab, TabbedContent, Label, DataTable
-from textual.widgets.data_table import RowKey
-from textual.widget import Widget
-from textual.containers import Container, Grid, Horizontal
-from textual.reactive import reactive
-from inventree_tui.api import ApiException, scanBarcode, CachedStockItemRow, RowBaseModel, transfer_items, CachedStockItemCheckInRow
-from textual.screen import Screen, ModalScreen
-import asyncio
+from typing import List, Set, Type
 
+from pydantic import ValidationError
+from textual.app import App, ComposeResult
+from textual.containers import Container, Horizontal
 from textual.events import Event, Key
 from textual.logging import TextualHandler
-
 from textual.message import Message
-from typing import List, Type, Any, Set
-from pydantic import ValidationError
+from textual.reactive import reactive
+from textual.screen import ModalScreen, Screen
+from textual.widget import Widget
+from textual.widgets import (
+    Button,
+    DataTable,
+    Header,
+    Input,
+    Label,
+    Static,
+    TabbedContent,
+    TabPane,
+)
+from textual.widgets.data_table import RowKey
 
+from inventree_tui.api import (
+    ApiException,
+    CachedStockItemCheckInRow,
+    CachedStockItemRow,
+    RowBaseModel,
+    scanBarcode,
+    transfer_items,
+)
+
+from .error_screen import ErrorDialogScreen, IgnorableErrorEvent
 from .part_search import PartSearchTab
-from .error_screen import IgnorableErrorEvent, ErrorDialogScreen
-
 
 logging.basicConfig(
     level="NOTSET",
     handlers=[TextualHandler()],
 )
 
+
 class UpdateTableMessage(Message):
     def __init__(self, data: List[RowBaseModel]):
         super().__init__()
         self.data = data
 
+
 class ModelDataTable(DataTable):
-
     # these can't be class attributes...
-    #data: Set[RowBaseModel] = reactive(set([]), recompose=True)
-    #sort_column_key: str = None
+    # data: Set[RowBaseModel] = reactive(set([]), recompose=True)
+    # sort_column_key: str = None
 
-    def __init__(self, model_class: Type[RowBaseModel], sort_column_key: str = None, *args, **kwargs):
-        self.data = set([]) #reactive(set([]), recompose=True)
+    def __init__(
+        self,
+        model_class: Type[RowBaseModel],
+        sort_column_key: str = None,
+        *args,
+        **kwargs,
+    ):
+        self.data = set([])  # reactive(set([]), recompose=True)
         self.sort_column_key = None
 
         super().__init__(*args, **kwargs)
         self.model_class = model_class
         logging.info(f"CREATED MODEL DATA TABLE WITH CLASS: {model_class}")
         self.sort_column_key = sort_column_key
-        if self.sort_column_key is not None and self.sort_column_key not in model_class.get_field_names(by_alias=True):
-            raise Exception(f"Not a valid sort column, options are {model_class.get_field_names(by_alias=True)}")
+        if (
+            self.sort_column_key is not None
+            and self.sort_column_key not in model_class.get_field_names(by_alias=True)
+        ):
+            raise Exception(
+                f"Not a valid sort column, options are {model_class.get_field_names(by_alias=True)}"
+            )
 
     async def on_mount(self) -> None:
         columns = self.model_class.get_field_names(by_alias=True)
@@ -53,17 +79,17 @@ class ModelDataTable(DataTable):
             dn = self.model_class.field_display_name(col)
             self.add_column(dn, key=col)
 
-        #self.add_column("Del", key="delete_button")
+        # self.add_column("Del", key="delete_button")
         self.cursor_type = "row"
         self.zerbra_stipes = True
         await self.reload()
 
-#    async def watch_props_and_update(self, props: List[Any]) -> None:
-        #        await self.update(self.model_class.parse_obj(props))
+    #    async def watch_props_and_update(self, props: List[Any]) -> None:
+    #        await self.update(self.model_class.parse_obj(props))
 
-#    async def on_message(self, message: Message) -> None:
-#        if isinstance(message, UpdateTableMessage):
-#            await self.watch_props_and_update(message.data)
+    #    async def on_message(self, message: Message) -> None:
+    #        if isinstance(message, UpdateTableMessage):
+    #            await self.watch_props_and_update(message.data)
 
     async def reload(self) -> None:
         await self.update()
@@ -79,18 +105,18 @@ class ModelDataTable(DataTable):
         self.data = set([])
         await self.update()
 
-    #async def watch_data(self, data: Set[RowBaseModel]):
+    # async def watch_data(self, data: Set[RowBaseModel]):
     #    logging.debug(f"DATA WATCH TRIGGERED {data}")
     #    await self.update(data)
 
     def add_row(self, *cells, height=1, key=None, label=None):
-        #cells = (*cells, "X") 
+        # cells = (*cells, "X")
         super().add_row(*cells, height=height, key=key, label=label)
 
     async def update(self, data: Set[RowBaseModel] = None) -> None:
         if data is None:
             data = self.data
-        #self.clear()
+        # self.clear()
         columns = self.model_class.get_field_names()
         needs_sorted = False
         for obj in data:
@@ -105,7 +131,7 @@ class ModelDataTable(DataTable):
                 self.remove_row(row_key)
 
         for row_key in self.rows.keys():
-            cells = self.get_row(row_key)
+            self.get_row(row_key)
             for col_key in self.columns.keys():
                 if col_key != "delete_button":
                     current_value = self.get_cell(row_key, col_key)
@@ -119,7 +145,7 @@ class ModelDataTable(DataTable):
             self.sort(self.sort_column_key, reverse=True)
 
     async def on_data_table_row_selected(self, message: DataTable.RowSelected):
-        #TODO: Add stock splitting to allow the row editor
+        # TODO: Add stock splitting to allow the row editor
         return
         # control, cursor_row, data_table, row_key
         event = RowEditEvent(message.data_table, message.row_key)
@@ -134,7 +160,7 @@ class ModelDataTable(DataTable):
             row = self.ordered_rows[self.cursor_row]
             row_key = row.key
             self.data.remove(row_key.value)
-            self.move_cursor(row=self.cursor_row-1)
+            self.move_cursor(row=self.cursor_row - 1)
             await self.update()
 
 
@@ -143,16 +169,19 @@ class CheckInBeginEvent(Event):
         super().__init__()
         self.item = item
 
+
 class RowEditEvent(Event):
     def __init__(self, table, row_key):
         super().__init__()
         self.table = table
         self.row_key = row_key
 
+
 class LabeledText(Widget):
     """Generates a greeting."""
-    text = reactive("", recompose=True)  
-    label = reactive("", recompose=True)  
+
+    text = reactive("", recompose=True)
+    label = reactive("", recompose=True)
     DEFAULT_CSS = """
     LabeledText {
         layout: horizontal;
@@ -164,12 +193,15 @@ class LabeledText(Widget):
         super().__init__(*args, **kwargs)
         self.label = label
         self.text = placeholder
+
     def compose(self) -> ComposeResult:
         yield Label(f"{self.label}: {self.text}")
+
 
 class CheckInScreen(ModalScreen):
     dialog_title = reactive("Row Edit", recompose=True)
     error_message = reactive("")
+
     def __init__(self, item):
         super().__init__()
         self.item = item
@@ -180,11 +212,13 @@ class CheckInScreen(ModalScreen):
             container.border_title = self.dialog_title
             yield Static(f"Current Location: {self.item.stock_location.name}")
             yield Static(f"Default Location: {self.item.default_location.name}")
-            yield Static(f"Confirm Check-In?", classes="dialog-question")
-            static = Static(self.error_message, id="check-errormsg", classes="error-msg")
+            yield Static("Confirm Check-In?", classes="dialog-question")
+            static = Static(
+                self.error_message, id="check-errormsg", classes="error-msg"
+            )
             static.styles.display = "none"
             yield static
-            with Horizontal (classes="button-bar"):
+            with Horizontal(classes="button-bar"):
                 yield Button("Confirm", variant="success", id="checkin-confirm")
                 yield Static(" ")
                 yield Button("Cancel", variant="error", id="checkin-cancel")
@@ -208,7 +242,8 @@ class CheckInScreen(ModalScreen):
         except:
             pass
 
-#class RowEditScreen(ModalScreen[RowBaseModel]):
+
+# class RowEditScreen(ModalScreen[RowBaseModel]):
 class RowEditScreen(Screen):
     dialog_title = reactive("Row Edit", recompose=True)
     row = reactive(None, recompose=True)
@@ -256,7 +291,7 @@ class RowEditScreen(Screen):
             static = Static(self.error_message, id="errormsg", classes="error-msg")
             static.styles.display = "none"
             yield static
-            with Horizontal (classes="button-bar"):
+            with Horizontal(classes="button-bar"):
                 yield Button("OK", variant="primary", id="ok")
                 yield Static(" ")
                 yield Button("Cancel", variant="error", id="cancel")
@@ -270,14 +305,14 @@ class RowEditScreen(Screen):
         inputs = self.query(Input)
         values = {}
         for i in inputs:
-            values[i.name] = i.value 
+            values[i.name] = i.value
 
         values = self.row.dict() | values
         try:
             other = self.row.__class__(**values)
             self.row.update(other, validate=True)
         except ValidationError as e:
-            msgs = [e2['msg'] for e2 in e.errors()]
+            msgs = [e2["msg"] for e2 in e.errors()]
             self.error_message = str(". ".join(msgs))
             return
         except ValueError as e:
@@ -292,7 +327,9 @@ class TransferItemsTab(Container):
     destination = reactive(None)
 
     def compose(self) -> ComposeResult:
-        yield Input(placeholder="Scan Location Barcode", id="transfer_destination_input")
+        yield Input(
+            placeholder="Scan Location Barcode", id="transfer_destination_input"
+        )
         yield LabeledText("Destination", "None", id="destination")
         yield Input(placeholder="Scan Items", id="transfer_item_input")
         with Horizontal():
@@ -302,20 +339,19 @@ class TransferItemsTab(Container):
                 id="transfer-items-table",
                 zebra_stripes=True,
             )
-        with Horizontal (classes="button-bar"):
+        with Horizontal(classes="button-bar"):
             yield Button("Done", id="transfer_done_button", variant="primary")
             yield Static(" ")
             yield Button("Cancel", id="cancel_button", variant="default")
-        yield Static("Status Ok",id="transfer_status_text", classes="status_text")
+        yield Static("Status Ok", id="transfer_status_text", classes="status_text")
 
     async def on_mount(self):
-
-        table = self.query_one("#transfer-items-table")
-        #TODO: remove this after testing
-        #await self.handle_item_input('{"stockitem":338}')
-        #await self.handle_item_input('{"stockitem":338}')
-        #await self.handle_item_input('{"stockitem":339}')
-        #await self.handle_item_input('{"stockitem":337}')
+        table = self.query_one("#transfer-items-table")  # noqa
+        # TODO: remove this after testing
+        # await self.handle_item_input('{"stockitem":338}')
+        # await self.handle_item_input('{"stockitem":338}')
+        # await self.handle_item_input('{"stockitem":339}')
+        # await self.handle_item_input('{"stockitem":337}')
 
     def watch_destination(self, destination):
         logging.debug(f"WATCH DESTINATION {destination}")
@@ -342,7 +378,7 @@ class TransferItemsTab(Container):
                 self.destination = item
                 self.query_one("#transfer_item_input").focus()
             except ApiException as e:
-                #message.input.value = str(e)
+                # message.input.value = str(e)
                 event = IgnorableErrorEvent(self, "Scan Error", str(e))
                 self.post_message(event)
             message.input.remove_class("readonly")
@@ -377,21 +413,25 @@ class TransferItemsTab(Container):
 
             status_text = self.query_one("#transfer_status_text")
             s = "s" if len(items) > 1 else ""
-            status_text.update(f"Transferred {len(items)} stock item{s} to {self.destination.name}")
+            status_text.update(
+                f"Transferred {len(items)} stock item{s} to {self.destination.name}"
+            )
             await table.clear_data()
 
         elif event.button.id == "cancel_button":
             table = self.query_one("#transfer-items-table")
             await table.clear_data()
 
-#class CheckInItemsTab(Container):
+
+# class CheckInItemsTab(Container):
 #    def compose(self) -> ComposeResult:
 #        yield Static("Check-In Items Tab")
+
 
 class CheckInItemsTab(Container):
     def compose(self) -> ComposeResult:
         yield Input(placeholder="Scan Items", id="checkin_item_input")
-        yield Static("History Table",id="checkin_table_title", classes="table-title")
+        yield Static("History Table", id="checkin_table_title", classes="table-title")
         with Horizontal():
             yield ModelDataTable(
                 model_class=CachedStockItemCheckInRow,
@@ -399,26 +439,27 @@ class CheckInItemsTab(Container):
                 id="checkin_items_table",
                 zebra_stripes=True,
             )
-        with Horizontal (classes="button-bar"):
+        with Horizontal(classes="button-bar"):
             yield Button("Clear History", id="checkin_clear_button", variant="primary")
-        yield Static("Status Ok",id="checkin_status_text", classes="status_text")
+        yield Static("Status Ok", id="checkin_status_text", classes="status_text")
 
     async def on_mount(self):
-
-        table = self.query_one("#checkin_items_table")
-        #TODO: remove this after testing
-        #await self.handle_item_input('{"stockitem":338}')
-        #await self.handle_item_input('{"stockitem":338}')
-        #await self.handle_item_input('{"stockitem":339}')
-        #await self.handle_item_input('{"stockitem":9}')
+        table = self.query_one("#checkin_items_table")  # noqa
+        # TODO: remove this after testing
+        # await self.handle_item_input('{"stockitem":338}')
+        # await self.handle_item_input('{"stockitem":338}')
+        # await self.handle_item_input('{"stockitem":339}')
+        # await self.handle_item_input('{"stockitem":9}')
 
     async def handle_item_input(self, value: str):
         status_text = self.query_one("#checkin_status_text")
         try:
             item = scanBarcode(value, ["stockitem"])
-            #table = self.query_one("#checkin_items_table")
+            # table = self.query_one("#checkin_items_table")
             if item.default_location is None:
-                errmsg = f"Cannot check-in Stock #{item._stock_item.pk}: No default location"
+                errmsg = (
+                    f"Cannot check-in Stock #{item._stock_item.pk}: No default location"
+                )
                 status_text.update(errmsg)
                 event = IgnorableErrorEvent(self, "Check-In Error", errmsg)
                 self.post_message(event)
@@ -427,7 +468,7 @@ class CheckInItemsTab(Container):
             logging.info(f"POSTING CHECK IN BEGIN {item}")
             event = CheckInBeginEvent(item)
             self.post_message(event)
-            #await table.add_item(CachedStockItemRow(item))
+            # await table.add_item(CachedStockItemRow(item))
         except ApiException as e:
             event = IgnorableErrorEvent(self, "Scan Error", str(e))
             self.post_message(event)
@@ -446,6 +487,7 @@ class CheckInItemsTab(Container):
             status_text.update("Cleared history")
             await table.clear_data()
 
+
 class InventreeApp(App):
     CSS_PATH = "styles.tcss"
     TITLE = "InvenTree TUI"
@@ -453,13 +495,13 @@ class InventreeApp(App):
     def compose(self) -> ComposeResult:
         yield Header()
         with TabbedContent():
-            with TabPane("Transfer Items",id="transfer-items-tab"):
+            with TabPane("Transfer Items", id="transfer-items-tab"):
                 yield TransferItemsTab()
             with TabPane("Check-In Items", id="checkin-items-tab"):
                 yield CheckInItemsTab()
             with TabPane("Part Search", id="part-search-tab"):
                 yield PartSearchTab()
-        #yield Footer()
+        # yield Footer()
 
     async def on_ignorable_error_event(self, event: IgnorableErrorEvent):
         dialog = ErrorDialogScreen()
@@ -483,7 +525,9 @@ class InventreeApp(App):
             try:
                 if item.stock_location.pk == destination.pk:
                     status_text = self.query_one("#checkin_status_text")
-                    status_text.update(f"Stock #{item._stock_item.pk} was already at {destination.name}")
+                    status_text.update(
+                        f"Stock #{item._stock_item.pk} was already at {destination.name}"
+                    )
                 else:
                     transfer_items([item], destination)
             except Exception as e:
@@ -494,18 +538,13 @@ class InventreeApp(App):
             table = self.query_one("#checkin_items_table")
             await table.add_item(CachedStockItemCheckInRow(item))
 
-
         await self.push_screen(dialog, checkin_dialog_callback)
 
     def on_mount(self):
         self.query_one("#transfer_destination_input").focus()
-        #self.query_one("#checkin_item_input").focus()
+        # self.query_one("#checkin_item_input").focus()
 
- #       async def handle_button_pressed(self, message: Button.Pressed) -> None:
+
+#       async def handle_button_pressed(self, message: Button.Pressed) -> None:
 #            if message.button.id == "exception_ok":
 #                await self.pop_screen()
-
-#app = InventreeApp()
-#if __name__ == "__main__":
-#    app = InventreeApp()
-#    app.run()

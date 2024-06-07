@@ -1,0 +1,6 @@
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = [
+    "E501",  # line too long
+    "E722",  # bare except
+    ]
