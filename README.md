@@ -1,7 +1,7 @@
 
 # InvenTree TUI
 
-Terminal User Interface for InvenTree, built with [Textual](https://github.com/Textualize/textual). Project maintained on [GitHub](https://github.com/j-huff/inventree-tui).        
+Terminal User Interface for InvenTree, built with [Textual](https://github.com/Textualize/textual). Project maintained on [GitHub](https://github.com/j-huff/inventree-tui).
 
 ## Installation
 
