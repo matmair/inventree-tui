@@ -113,7 +113,7 @@ def scanBarcode(text, whitelist=None):
         if e.response is not None:
             raise ApiException(f"{e.response.status_code}")
         else:
-            status = json.loads(e.args[0]['status_code'])
+            status = e.args[0].get('status_code', 0)
             if status != 200:
                 raise ApiException(f"Status Code {status}")
             try:

@@ -353,6 +353,12 @@ class TransferItemsTab(Container):
     async def on_input_submitted(self, message: Input.Submitted) -> None:
         if message.input.id == "transfer_destination_input":
             message.input.add_class("readonly")
+
+            # Test if no input is given
+            if len(message.input.value) == 0:
+                message.input.remove_class("readonly")
+                return
+
             try:
                 item = scanBarcode(message.input.value, ["stocklocation"])
                 self.destination = item
